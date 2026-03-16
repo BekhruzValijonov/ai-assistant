@@ -21,6 +21,7 @@ export default function SphereScene({ isListening }) {
   const audioContextRef = useRef(null)
   const dataArrayRef = useRef(null)
   const frameCounterRef = useRef(0)
+  const smoothedLevelRef = useRef(0)
 
   const uniforms = useMemo(
     () => ({
@@ -30,6 +31,7 @@ export default function SphereScene({ isListening }) {
       u_red: { value: 0.48 },
       u_green: { value: 0.83 },
       u_blue: { value: 0.75 },
+      u_depthFade: { value: 0.6 }, // коэфф. влияния глубины на прозрачность (0–1)
     }),
     []
   )
@@ -65,7 +67,7 @@ export default function SphereScene({ isListening }) {
         audioContextRef.current = audioContext
         const source = audioContext.createMediaStreamSource(stream)
         const analyser = audioContext.createAnalyser()
-        analyser.fftSize = 128                 // меньше частот → дешевле
+        analyser.fftSize = 128
         analyser.smoothingTimeConstant = 0.85
         source.connect(analyser)
         analyserRef.current = analyser
@@ -122,13 +124,20 @@ export default function SphereScene({ isListening }) {
       analyserRef.current.getByteFrequencyData(dataArrayRef.current)
       let sum = 0
       const len = dataArrayRef.current.length
-      for (let i = 0; i < len; i += 2) {      // берём каждую вторую частоту
+      for (let i = 0; i < len; i += 2) {
         sum += dataArrayRef.current[i]
       }
       const average = sum / (len / 2)
       const boosted = average * 0.7
-      uniforms.u_frequency.value = Math.min(boosted, 40)
-      uniforms.u_pointSize.value = 8.5 + boosted * 0.05
+
+      // Небольшое «размытие по Гауссу» по времени, чтобы убрать мерцание
+      // (экспоненциальное сглаживание ≈ 1D гауссов фильтр по истории уровней)
+      const prev = smoothedLevelRef.current
+      const smoothed = prev * 0.7 + boosted * 0.3
+      smoothedLevelRef.current = smoothed
+
+      uniforms.u_frequency.value = Math.min(smoothed, 40)
+      uniforms.u_pointSize.value = 8.5 + smoothed * 0.05
     } else if (!isListening) {
       uniforms.u_frequency.value = 0
       uniforms.u_pointSize.value = 9.0

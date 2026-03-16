@@ -9,16 +9,6 @@ function App() {
 
   return (
     <div className="app">
-      {/* Status bar — скрыт на десктопе */}
-      <header className="status-bar">
-        <span className="status-bar__time">9:41</span>
-        <div className="status-bar__icons">
-          <span className="status-bar__icon status-bar__icon--cellular" />
-          <span className="status-bar__icon status-bar__icon--wifi" />
-          <span className="status-bar__icon status-bar__icon--battery" />
-        </div>
-      </header>
-
       {/* Navigation */}
       <nav className="nav">
         <button type="button" className="nav__back" aria-label="Back">
@@ -40,14 +30,14 @@ function App() {
           <div className="visualizer__canvas-wrap">
             <Canvas
               gl={{
-                alpha: true,
-                antialias: true,
+                alpha: false,
+                antialias: false,
                 premultipliedAlpha: false,
               }}
               onCreated={({ gl: renderer }) => {
-                renderer.setClearColor(0x000000, 0)
-                const canvas = renderer.domElement
-                canvas.style.setProperty('background-color', 'transparent', 'important')
+                renderer.setClearColor(0xFF0000, 0.4)
+                // const canvas = renderer.domElement
+                // canvas.style.setProperty('background-color', 'transparent', 'important')
               }}
               camera={{ position: [0, 0, 3.2], fov: 50 }}
               dpr={[1, 2]}

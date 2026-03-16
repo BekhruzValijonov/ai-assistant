@@ -106,6 +106,9 @@ export const pointsVertexShader = /* glsl */ `
   uniform float u_time;
   uniform float u_frequency;
   uniform float u_pointSize;
+  uniform float u_depthFade; // коэффициент влияния глубины на прозрачность
+
+  varying float v_viewZ;
 
   vec3 mod289(vec3 x) {
     return x - floor(x * (1.0 / 289.0)) * 289.0;
@@ -202,6 +205,9 @@ export const pointsVertexShader = /* glsl */ `
 
     vec4 mvPosition = modelViewMatrix * vec4(newPosition, 1.0);
     gl_Position = projectionMatrix * mvPosition;
+
+    // Глубина во view‑space (используем в фрагментном шейдере для прозрачности)
+    v_viewZ = -mvPosition.z;
 
     // Уменьшаем размер точек на границе сферы (силуэт), чтобы убрать сгущение слева/справа
     vec3 normalView = (modelViewMatrix * vec4(normal, 0.0)).xyz;

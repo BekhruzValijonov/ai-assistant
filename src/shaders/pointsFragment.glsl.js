@@ -4,6 +4,9 @@ export const pointsFragmentShader = /* glsl */ `
   uniform float u_green;
   uniform float u_blue;
   uniform float u_time;
+  uniform float u_depthFade; // коэффициент влияния глубины на прозрачность
+
+  varying float v_viewZ;
 
   #define M_PI 3.1415926535897932384626433832795
   #define M_TWO_PI (2.0 * M_PI)
@@ -91,7 +94,13 @@ export const pointsFragmentShader = /* glsl */ `
     vec3 baseColor = vec3(u_red, u_green, u_blue);
     vec3 col = baseColor * intensity;
 
+    // Глубинное затухание: дальние точки становятся более прозрачными
+    // v_viewZ растёт с расстоянием; depthFactor ≈ 0…1
+    float depthFactor = clamp(v_viewZ * 0.25, 0.0, 1.0);
+    float depthFade = mix(1.0, 1.0 - u_depthFade, depthFactor);
+
     float alpha = clamp(core * 0.85 + halo * 0.6, 0.7, 1.0);
+    alpha *= depthFade;
 
     gl_FragColor = vec4(col, alpha);
   }

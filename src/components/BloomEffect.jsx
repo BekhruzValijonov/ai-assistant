@@ -11,9 +11,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { Pass, FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass.js'
 
-/**
- * Копирует текстуру в writeBuffer (чтобы следующий pass мог её прочитать из readBuffer после swap).
- */
+// Простой pass: берём RT_POINTS и передаём его в композер bloom
 class TextureToBufferPass extends Pass {
   constructor(renderTarget) {
     super()
@@ -32,7 +30,7 @@ class TextureToBufferPass extends Pass {
     this._material.map = rt?.texture ?? null
   }
 
-  render(renderer, writeBuffer, readBuffer) {
+  render(renderer, writeBuffer) {
     if (!this._rt) return
     this._material.map = this._rt.texture
     renderer.setRenderTarget(writeBuffer)
@@ -47,26 +45,37 @@ class TextureToBufferPass extends Pass {
 }
 
 /**
- * Bloom только по точкам: точки на layer 1, рендер слоя в RT → bloom → аддитивное наложение на кадр.
+ * Простой bloom только по точкам:
+ * 1) рендерим точки (layer 1) в RT_POINTS
+ * 2) считаем bloom в RT_BLOOM
+ * 3) каждый кадр чуть затемняем экран полупрозрачным quad
+ * 4) поверх рисуем bloom → мягкий glow без сложного feedback.
  */
 export default function BloomEffect() {
   const { gl, scene, camera, size } = useThree()
   const store = useStore()
-  const composerRef = useRef(null)
+
   const rtPointsRef = useRef(null)
   const rtBloomRef = useRef(null)
-  const quadAdditiveRef = useRef(null)
+  const composerRef = useRef(null)
   const texturePassRef = useRef(null)
+  const bloomQuadRef = useRef(null)
+  const fadeQuadRef = useRef(null)
 
   useEffect(() => {
+    gl.autoClear = false
     gl.setClearColor(0x000000, 0)
-    if (gl.domElement) gl.domElement.style.setProperty('background-color', 'transparent', 'important')
+    if (gl.domElement) {
+      gl.domElement.style.setProperty('background-color', 'transparent', 'important')
+    }
 
-    const w = size.width * gl.getPixelRatio()
-    const h = size.height * gl.getPixelRatio()
+    const pr = gl.getPixelRatio()
+    const w = size.width * pr
+    const h = size.height * pr
 
     const RT_POINTS = new WebGLRenderTarget(w, h, { type: HalfFloatType })
     const RT_BLOOM = new WebGLRenderTarget(w, h, { type: HalfFloatType })
+
     rtPointsRef.current = RT_POINTS
     rtBloomRef.current = RT_BLOOM
 
@@ -78,34 +87,46 @@ export default function BloomEffect() {
     composer.addPass(texturePass)
 
     const resolution = new Vector2(w, h)
-    const bloomPass = new UnrealBloomPass(resolution, 0.28, 0.3, 0.45)
+    const bloomPass = new UnrealBloomPass(resolution, 0.32, 0.4, 0.42)
     composer.addPass(bloomPass)
 
-    const quadMaterial = new MeshBasicMaterial({
+    composerRef.current = { composer, bloomPass }
+
+    // Quad, который выводит bloom на экран
+    const bloomMaterial = new MeshBasicMaterial({
       map: RT_BLOOM.texture,
       depthTest: false,
       depthWrite: false,
       transparent: true,
       blending: AdditiveBlending,
     })
-    const quad = new FullScreenQuad(quadMaterial)
-    quadAdditiveRef.current = { quad, material: quadMaterial }
+    const bloomQuad = new FullScreenQuad(bloomMaterial)
+    bloomQuadRef.current = { quad: bloomQuad, material: bloomMaterial }
 
-    composerRef.current = { composer, bloomPass }
+    // Quad для лёгкого затемнения/смазывания предыдущего кадра
+    const fadeMaterial = new MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.12, // регулирует длину «хвоста»
+      depthTest: false,
+      depthWrite: false,
+    })
+    const fadeQuad = new FullScreenQuad(fadeMaterial)
+    fadeQuadRef.current = { quad: fadeQuad, material: fadeMaterial }
 
     gl.setAnimationLoop((time) => {
       const state = store.getState()
       state.advance(time)
 
-      // 1) Полный кадр (все слои) на экран — прозрачный фон
+      // 1) Плавно затухаем предыдущий кадр (простое temporal blur)
+      gl.setRenderTarget(null)
+      if (fadeQuadRef.current) {
+        fadeQuadRef.current.quad.render(gl)
+      }
+
+      // 2) Рендерим точки в RT_POINTS
       camera.layers.enable(0)
       camera.layers.enable(1)
-      gl.setRenderTarget(null)
-      gl.setClearColor(0x000000, 0)
-      gl.clear()
-      gl.render(scene, camera)
-
-      // 2) Только точки (layer 1) в RT
       camera.layers.set(1)
       gl.setRenderTarget(RT_POINTS)
       gl.clear()
@@ -113,52 +134,46 @@ export default function BloomEffect() {
       camera.layers.enable(0)
       camera.layers.enable(1)
 
-      // 3) Bloom только по буферу с точками
+      // 3) Считаем bloom в RT_BLOOM
       texturePass.setRenderTarget(RT_POINTS)
       composer.render()
 
-      // 4) Аддитивно накладываем свечение на экран
-      quadMaterial.map = composer.readBuffer.texture
-      gl.setRenderTarget(null)
-      quad.render(gl)
+      // 4) Рисуем bloom поверх текущего кадра
+      if (bloomQuadRef.current) {
+        bloomQuadRef.current.material.map = composer.readBuffer.texture
+        gl.setRenderTarget(null)
+        bloomQuadRef.current.quad.render(gl)
+      }
     })
 
     return () => {
-      const s = store.getState()
+      const state = store.getState()
       gl.setAnimationLoop((time) => {
-        s.advance(time)
-        gl.render(s.scene, s.camera)
+        state.advance(time)
+        gl.render(state.scene, state.camera)
       })
+
       composer.dispose()
       RT_POINTS.dispose()
       RT_BLOOM.dispose()
       texturePass.dispose()
-      quadMaterial.dispose()
-      quad.dispose()
-      composerRef.current = null
+      if (bloomQuadRef.current) {
+        bloomQuadRef.current.material.dispose()
+        bloomQuadRef.current.quad.dispose()
+      }
+      if (fadeQuadRef.current) {
+        fadeQuadRef.current.material.dispose()
+        fadeQuadRef.current.quad.dispose()
+      }
+
       rtPointsRef.current = null
       rtBloomRef.current = null
-      quadAdditiveRef.current = null
+      composerRef.current = null
+      texturePassRef.current = null
+      bloomQuadRef.current = null
+      fadeQuadRef.current = null
     }
-  }, [gl, scene, camera, store])
-
-  useEffect(() => {
-    const pr = gl.getPixelRatio()
-    const w = size.width * pr
-    const h = size.height * pr
-    const rtPoints = rtPointsRef.current
-    const rtBloom = rtBloomRef.current
-    const data = composerRef.current
-    if (rtPoints) {
-      rtPoints.setSize(w, h)
-    }
-    if (rtBloom) {
-      rtBloom.setSize(w, h)
-    }
-    if (data?.bloomPass) {
-      data.bloomPass.resolution.set(w, h)
-    }
-  }, [gl, size.width, size.height])
+  }, [gl, scene, camera, size.width, size.height, store])
 
   return null
 }
