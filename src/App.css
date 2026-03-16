@@ -1,0 +1,364 @@
+/* Layout: mobile-first, адаптивно для ПК */
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background-color: rgb(1,2,2);
+  color: #fff;
+}
+
+@media (min-width: 768px) {
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+}
+
+@media (min-width: 1024px) {
+  .app {
+    max-width: 520px;
+    border-radius: 24px;
+    margin: 24px auto;
+    min-height: calc(100vh - 48px);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Status bar */
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.status-bar__icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-bar__icon {
+  display: block;
+  width: 18px;
+  height: 12px;
+  background: currentColor;
+  opacity: 0.9;
+}
+
+.status-bar__icon--cellular {
+  width: 4px;
+  height: 10px;
+  background: currentColor;
+  border-radius: 1px;
+  box-shadow: 5px 0 0 currentColor, 10px 0 0 currentColor, 15px 0 0 currentColor;
+  opacity: 0.9;
+  align-self: flex-end;
+}
+
+.status-bar__icon--wifi {
+  width: 16px;
+  height: 11px;
+  background: transparent;
+  border: 2px solid currentColor;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  margin-top: 2px;
+}
+
+.status-bar__icon--battery {
+  width: 25px;
+  height: 12px;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  background: linear-gradient(90deg, currentColor 0% 78%, transparent 78%);
+}
+
+@media (min-width: 768px) {
+  .status-bar {
+    display: none; /* на ПК убираем полосу статуса телефона */
+  }
+}
+
+/* Navigation */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 20px;
+  gap: 16px;
+}
+
+.nav__back {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.nav__back:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.nav__title {
+  flex: 1;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.nav__spacer {
+  width: 40px;
+  flex-shrink: 0;
+}
+
+/* Main content */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 32px 32px;
+  text-align: center;
+}
+
+.main__hint {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 32px;
+}
+
+/* Visualizer: 3D сфера в стиле Сбера */
+.visualizer {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  margin-bottom: 40px;
+  background: transparent;
+}
+
+/* Контейнер для Three.js Canvas */
+.visualizer__canvas-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.visualizer__canvas-wrap canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Состояние "слушаю" */
+.visualizer--listening {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Description text */
+.main__description {
+  font-size: 15px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 280px;
+}
+
+.main__description--muted {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Footer */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 24px 32px 40px;
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
+}
+
+.footer__btn {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  transition: background 0.2s, color 0.2s;
+}
+
+.footer__btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* Microphone button */
+.footer__mic {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.footer__mic::before,
+.footer__mic::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.footer__mic::before {
+  inset: -8px;
+}
+
+.footer__mic::after {
+  inset: -16px;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.footer__mic-inner {
+  position: relative;
+  z-index: 1;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #3b82f6;
+  color: #fff;
+  border-radius: 50%;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.45);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.footer__mic:hover .footer__mic-inner {
+  transform: scale(1.05);
+  box-shadow: 0 6px 28px rgba(59, 130, 246, 0.55);
+}
+
+/* Кнопка микрофона в режиме "слушаю" */
+.footer__mic--active .footer__mic-inner {
+  background: #ef4444;
+  box-shadow: 0 4px 24px rgba(239, 68, 68, 0.5);
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
+
+.footer__mic--active:hover .footer__mic-inner {
+  box-shadow: 0 6px 28px rgba(239, 68, 68, 0.6);
+}
+
+.footer__mic--active::before,
+.footer__mic--active::after {
+  border-color: rgba(239, 68, 68, 0.35);
+  animation: mic-ring-pulse 1.2s ease-in-out infinite;
+}
+
+.footer__mic--active::after {
+  animation-delay: 0.15s;
+}
+
+@keyframes mic-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.03); opacity: 0.95; }
+}
+
+@keyframes mic-ring-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+/* Safe area for notched devices */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .app {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@media (min-width: 400px) {
+  .visualizer {
+    width: 260px;
+    height: 260px;
+  }
+
+  .footer__mic {
+    width: 88px;
+    height: 88px;
+  }
+
+  .footer__mic-inner {
+    width: 72px;
+    height: 72px;
+  }
+}
+
+/* Десктоп: удобные отступы и размеры */
+@media (min-width: 768px) {
+  .main {
+    padding: 32px 40px 40px;
+  }
+
+  .main__hint {
+    font-size: 17px;
+  }
+
+  .main__description {
+    font-size: 16px;
+    max-width: 320px;
+  }
+
+  .footer {
+    gap: 40px;
+    padding: 28px 40px 44px;
+  }
+
+  .footer__btn {
+    width: 52px;
+    height: 52px;
+  }
+
+  .footer__btn:focus-visible,
+  .footer__mic:focus-visible,
+  .nav__back:focus-visible {
+    outline: 2px solid rgba(59, 130, 246, 0.6);
+    outline-offset: 2px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .visualizer {
+    width: 280px;
+    height: 280px;
+  }
+
+  .footer__mic {
+    width: 92px;
+    height: 92px;
+  }
+
+  .footer__mic-inner {
+    width: 76px;
+    height: 76px;
+  }
+}
