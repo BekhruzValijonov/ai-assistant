@@ -144,7 +144,7 @@ export default function SphereScene({ isListening }) {
       <TransparentBackground />
 
       <points ref={pointsRef}>
-        <icosahedronGeometry args={[1, 30]} />
+        <icosahedronGeometry args={[1, 15]} />
         
         <shaderMaterial
           vertexShader={pointsVertexShader}

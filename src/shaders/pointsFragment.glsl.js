@@ -85,13 +85,13 @@ export const pointsFragmentShader = /* glsl */ `
     float halo = exp(-4.0 * r * r);
 
     // Мягкая яркость — комфортно для глаз
-    float intensity = (core * 0.75 + halo * 0.85) * (0.5 + fireVal * 0.25);
+    float intensity = (core * 1.75 + halo * 1.85) * (0.5 + fireVal * 1.25);
     intensity = min(intensity, 1.0);
 
     vec3 baseColor = vec3(u_red, u_green, u_blue);
     vec3 col = baseColor * intensity;
 
-    float alpha = clamp(core * 0.85 + halo * 0.6, 0.4, 0.95);
+    float alpha = clamp(core * 0.85 + halo * 0.6, 0.7, 1.0);
 
     gl_FragColor = vec4(col, alpha);
   }
