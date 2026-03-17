@@ -202,6 +202,8 @@ export const pointsVertexShader = /* glsl */ `
   void main() {
     float noise = 3.0 * pnoise(position + u_time, vec3(10.0));
     float displacement = (u_frequency / 30.0 + 0.15) * (noise / 10.0);
+    float maxDisplacement = 0.095;
+    displacement = clamp(displacement, -maxDisplacement, maxDisplacement);
     vec3 newPosition = position + normal * displacement;
 
     vec4 mvPosition = modelViewMatrix * vec4(newPosition, 1.0);

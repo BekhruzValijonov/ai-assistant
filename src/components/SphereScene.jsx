@@ -64,10 +64,18 @@ export default function SphereScene({ isListening }) {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)()
         audioContextRef.current = audioContext
         const source = audioContext.createMediaStreamSource(stream)
+
+        // Полосовой фильтр на диапазон речи (~300–3400 Hz) — сфера реагирует в основном на голос
+        const voiceFilter = audioContext.createBiquadFilter()
+        voiceFilter.type = 'bandpass'
+        voiceFilter.frequency.value = 1200
+        voiceFilter.Q.value = 0.6 // ширина полосы ~2 kHz (примерно 200–2200 Hz)
+
         const analyser = audioContext.createAnalyser()
         analyser.fftSize = 128
         analyser.smoothingTimeConstant = 0.85
-        source.connect(analyser)
+        source.connect(voiceFilter)
+        voiceFilter.connect(analyser)
         analyserRef.current = analyser
         dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount)
       } catch (err) {
@@ -132,8 +140,9 @@ export default function SphereScene({ isListening }) {
       const smoothed = prev * 0.7 + boosted * 0.3
       smoothedLevelRef.current = smoothed
 
-      uniforms.u_frequency.value = Math.min(smoothed, 40)
-      uniforms.u_pointSize.value = 8.5 + smoothed * 0.05
+      // Ограничиваем реакцию, чтобы сфера не выходила за границы canvas
+      uniforms.u_frequency.value = Math.min(smoothed, 24)
+      uniforms.u_pointSize.value = 8.2 + smoothed * 0.03
     } else if (!isListening) {
       uniforms.u_frequency.value = 0
       uniforms.u_pointSize.value = 9.0
