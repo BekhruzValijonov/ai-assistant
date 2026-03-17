@@ -109,6 +109,7 @@ export const pointsVertexShader = /* glsl */ `
   uniform float u_depthFade; // коэффициент влияния глубины на прозрачность
 
   varying float v_viewZ;
+  varying float v_facing; // > 0 = лицевая сторона, <= 0 = задняя (не рисуем)
 
   vec3 mod289(vec3 x) {
     return x - floor(x * (1.0 / 289.0)) * 289.0;
@@ -209,11 +210,13 @@ export const pointsVertexShader = /* glsl */ `
     // Глубина во view‑space (используем в фрагментном шейдере для прозрачности)
     v_viewZ = -mvPosition.z;
 
-    // Уменьшаем размер точек на границе сферы (силуэт), чтобы убрать сгущение слева/справа
+    // Лицевая/задняя сторона; плавный переход размера у границы — меньше мерцания
     vec3 normalView = (modelViewMatrix * vec4(normal, 0.0)).xyz;
     vec3 viewDir = normalize(-mvPosition.xyz);
-    float facing = max(0.0, dot(normalize(normalView), viewDir));
-    float edgeScale = 0.25 + 0.75 * facing;
+    float facing = dot(normalize(normalView), viewDir);
+    v_facing = facing;
+    float facingSmooth = smoothstep(-0.08, 0.2, facing);
+    float edgeScale = 0.25 + 0.75 * facingSmooth;
     gl_PointSize = u_pointSize * edgeScale * (1.0 / -mvPosition.z);
   }
 `

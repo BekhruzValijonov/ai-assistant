@@ -7,6 +7,7 @@ export const pointsFragmentShader = /* glsl */ `
   uniform float u_depthFade; // коэффициент влияния глубины на прозрачность
 
   varying float v_viewZ;
+  varying float v_facing;
 
   #define M_PI 3.1415926535897932384626433832795
   #define M_TWO_PI (2.0 * M_PI)
@@ -68,9 +69,15 @@ export const pointsFragmentShader = /* glsl */ `
   }
 
   void main() {
-    // Маска круга внутри квадрата точки
+    // Плавное затухание у границы сферы: нет резкого вкл/выкл → нет мерцания на силуэте
+    // При v_facing ≈ 0 точка на границе; smoothstep даёт мягкий переход вместо discard
+    float facingAlpha = smoothstep(-0.12, 0.2, v_facing);
+    if (facingAlpha <= 0.0) discard;
+
+    // Мягкая маска круга — чуть более размытый край для снижения резкости
     float dist = length(gl_PointCoord - 0.5) * 2.0;
-    if (dist > 1.0) discard;
+    float edgeSoft = 1.0 - smoothstep(0.45, 1.12, dist);
+    if (edgeSoft <= 0.0) discard;
 
     // Используем fire/shade из оригинального шейдера как источник яркости,
     // но сам glow делаем простым и очень заметным по радиусу.
@@ -82,10 +89,10 @@ export const pointsFragmentShader = /* glsl */ `
     float fireVal = fire(uvFire + t * 0.25);
     fireVal = clamp(fireVal, 0.0, 1.0);
 
-    // Радиальный профиль: яркое ядро + широкий хвост
+    // Радиальный профиль: мягкое ядро + плавный ореол (чуть мягче)
     float r = length(gl_PointCoord - 0.5);
-    float core = smoothstep(0.0, 0.25, 0.5 - r);
-    float halo = exp(-4.0 * r * r);
+    float core = smoothstep(0.0, 0.55, 0.5 - r);
+    float halo = exp(-2.4 * r * r);
 
     // Мягкая яркость — комфортно для глаз
     float intensity = (core * 1.75 + halo * 1.85) * (0.5 + fireVal * 1.25);
@@ -95,12 +102,11 @@ export const pointsFragmentShader = /* glsl */ `
     vec3 col = baseColor * intensity;
 
     // Глубинное затухание: дальние точки становятся более прозрачными
-    // v_viewZ растёт с расстоянием; depthFactor ≈ 0…1
     float depthFactor = clamp(v_viewZ * 0.25, 0.0, 1.0);
     float depthFade = mix(1.0, 1.0 - u_depthFade, depthFactor);
 
     float alpha = clamp(core * 0.85 + halo * 0.6, 0.7, 1.0);
-    alpha *= depthFade;
+    alpha *= depthFade * edgeSoft * facingAlpha;
 
     gl_FragColor = vec4(col, alpha);
   }

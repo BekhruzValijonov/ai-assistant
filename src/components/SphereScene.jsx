@@ -1,17 +1,15 @@
 import { useRef, useEffect, useMemo } from 'react'
-import { useThree, useFrame } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import { pointsVertexShader } from '../shaders/blobVertex.glsl.js'
 import { pointsFragmentShader } from '../shaders/pointsFragment.glsl.js'
 
-function TransparentBackground() {
-  const { scene, gl } = useThree()
-
-  useEffect(() => {
-    scene.background = null
-    gl.setClearColor(0x000000, 0)
-  }, [scene, gl])
-
-  return null
+function BackPlane() {
+  return (
+    <mesh position={[0, 0, -4]} scale={[12, 12, 1]}>
+      <planeGeometry args={[1, 1]} />
+      <meshBasicMaterial color="black" />
+    </mesh>
+  )
 }
 
 export default function SphereScene({ isListening }) {
@@ -101,7 +99,7 @@ export default function SphereScene({ isListening }) {
     const t = state.clock.getElapsedTime()
     uniforms.u_time.value = t
 
-    // Плавучее движение всегда
+    // Плавучее движение
     if (isListening) {
       pointsRef.current.rotation.y = t * 0.22
       pointsRef.current.rotation.x = Math.sin(t * 0.18) * 0.12
@@ -130,8 +128,6 @@ export default function SphereScene({ isListening }) {
       const average = sum / (len / 2)
       const boosted = average * 0.7
 
-      // Небольшое «размытие по Гауссу» по времени, чтобы убрать мерцание
-      // (экспоненциальное сглаживание ≈ 1D гауссов фильтр по истории уровней)
       const prev = smoothedLevelRef.current
       const smoothed = prev * 0.7 + boosted * 0.3
       smoothedLevelRef.current = smoothed
@@ -149,9 +145,9 @@ export default function SphereScene({ isListening }) {
     if (pointsRef.current) pointsRef.current.layers.set(1)
   }, [])
 
-  return <>
-      <TransparentBackground />
-
+  return (
+    <>
+      <BackPlane />
       <points ref={pointsRef}>
         <icosahedronGeometry args={[1, 15]} />
         
@@ -165,4 +161,5 @@ export default function SphereScene({ isListening }) {
         />
       </points>
     </>
+  )
 }
